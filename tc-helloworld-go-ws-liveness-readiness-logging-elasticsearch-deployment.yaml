@@ -1,0 +1,99 @@
+# kubectl run tc-helloworld-go-ws --image=topconnector/tc-helloworld-go-ws:v1 image-pull-policy=Always --port=1010 --record
+# OR
+# kubectl apply -f tc-helloworld-go-ws-logging-elasticsearch-deployment.yaml
+# 
+# image: topconnector/tc-helloworld-go-ws-logging-elasticsearch:v1
+
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: tc-helloworld-go-ws-liveness-readiness-logging-elasticsearch
+spec:
+  replicas: 1 # tells deployment to run 2 pods matching the template
+  template: # create pods using pod definition in this template
+    metadata:
+      # the name is not included in the meta data as a unique name is
+      # generated from the deployment name
+      labels:
+        run: tc-helloworld-go-ws-liveness-readiness-logging-elasticsearch
+    spec:
+      containers:
+      - name: tc-helloworld-go-ws-liveness-readiness-logging-elasticsearch
+        image: tcmb/tc-helloworld-go-ws-liveness-readiness-logging-elasticsearch:v1
+        imagePullPolicy: Always
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: "ELASTICSEARCH_URL"
+          value: "http://10.103.188.191:9200"
+        - name: "ELASTICSEARCH_LOG_INDEX_NAME"
+          value: "tc-helloworld-go-ws-liveness-readiness-logging-elasticsearch-log"
+        ports:
+        - containerPort: 2020
+
+        # give this pod the same liveness and readiness probe because
+        # we always want the kubelet to restart it if it becomes
+        # unready, and at the same time we want to observe readiness
+        # as a signal to start testing.
+        # The kubelet uses liveness probes to know when to restart a Container. For example, liveness probes could catch a deadlock, where an application is running, but unable to make progress. Restarting a Container in such a state can help to make the application more available despite bugs.
+        # The livenessProbe field specifies that the kubelet should perform a liveness probe every 10 seconds. 
+        #   The initialDelaySeconds field tells the kubelet that it should wait 10 seconds before performing the first probe. 
+        #   initialDelaySeconds - How long to wait before sending a probe after a container starts. For liveness probes this should be safely longer than the time your app usually takes to start up. 
+        #   Without that, you could get stuck in a reboot loop. On the other hand, this value can be lower for readiness probes as you’ll likely want traffic to reach your new containers as soon as they’re ready.
+        #
+        #   To perform a probe, the kubelet sends an HTTP GET request to the server that is running in the Container and listening on port 2020.
+        #   If the handler for the server’s /healthz path returns a success code, the kubelet considers the Container to be alive and healthy. If the handler returns a failure code, the kubelet kills the Container and restarts it.
+        #   Any code greater than or equal to 200 and less than 400 indicates success. Any other code indicates failure.
+        #
+        #   timeoutSeconds - How long a request can take to respond before it’s considered a failure. 
+        #
+        #   periodSeconds - How often a probe will be sent. The value you set here depends on finding a balance between sending too many probes to your service or going too long without detecting a failure. 
+        #     In most cases we settle for a value between 10 and 20 seconds here.
+        #
+        # The kubelet uses readiness probes to know when a Container is ready to start accepting traffic. A Pod is considered ready when all of its Containers are ready. One use of this signal is to control which Pods are used as backends for Services. When a Pod is not ready, it is removed from Service load balancers.
+        #
+        #
+        # Here’s what this might look like in a real life failure scenario. Let’s say our API encounters a fatal exception when processing a request.
+        # 1. Readiness probe fails.
+        # 2. Kubernetes stops routing traffic to the pod.
+        # 3. Liveness probe fails.
+        # 4. Kubernetes restarts the pod.
+        # 5. Readiness probe succeeds.
+        # 6. Kubernetes starts routing traffic to the pod again.
+        #
+        # https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/
+        # initialDelaySeconds: Number of seconds after the container has started before liveness probes are initiated.
+        # periodSeconds: How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.
+        # timeoutSeconds: Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1.
+        # successThreshold: Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1. Must be 1 for liveness. Minimum value is 1.
+        # failureThreshold: Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3. Minimum value is 1.
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 2020
+            scheme: HTTP
+          initialDelaySeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+          periodSeconds: 10
+          successThreshold: 1
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 2020
+            scheme: HTTP
+          initialDelaySeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+          periodSeconds: 10
+          successThreshold: 1
+
+
+         
