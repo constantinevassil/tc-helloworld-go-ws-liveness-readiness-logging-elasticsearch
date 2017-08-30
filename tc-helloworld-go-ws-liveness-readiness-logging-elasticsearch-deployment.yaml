@@ -1,8 +1,6 @@
-# kubectl run tc-helloworld-go-ws --image=topconnector/tc-helloworld-go-ws:v1 image-pull-policy=Always --port=1010 --record
-# OR
-# kubectl apply -f tc-helloworld-go-ws-logging-elasticsearch-deployment.yaml
+# kubectl apply -f tc-helloworld-go-ws-liveness-readiness-logging-elasticsearch-deployment.yaml
 # 
-# image: topconnector/tc-helloworld-go-ws-logging-elasticsearch:v1
+# image: topconnector/tc-helloworld-go-ws-liveness-readiness-logging-elasticsearch-deployment.yaml:v1
 
 
 apiVersion: extensions/v1beta1
